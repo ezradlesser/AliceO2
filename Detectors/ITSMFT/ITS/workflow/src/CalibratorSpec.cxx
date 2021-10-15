@@ -115,14 +115,18 @@ void ITSCalibrator<Mapping>::run(ProcessingContext& pc)
                     int Row_n = pixel.getRow();
                     int Col_n = pixel.getCol();
                     int Charge_n = 170 - VPULSE_LOW;
+                    int Chip_id = mChipDataBuffer->getChipID();
 
-                    //LOG(INFO) << "getChipID: " << mChipDataBuffer->getChipID();
-                    
+                    //LOG(INFO) << "getChipID: " << Chip_id;
 
-                    if(mChipDataBuffer->getChipID() == 422) {
-                        //LOG(INFO) << "pixel Col = " << Col_n << ", pixel Row = " << Row_n << " Charge_n = " << Charge_n << ", getChipID: " << mChipDataBuffer->getChipID() << ", getROFrame: " << mChipDataBuffer->getROFrame();
-                        hitmap[Charge_n][Row_n][Col_n] = hitmap[Charge_n][Row_n][Col_n]+1;
-                        //hitmap_row_5[Charge_n][Col_n] = 1;
+                    //chip ids 6164, 6165, 6166
+                    //if(Chip_id == 4922){
+                    //    LOG(INFO) << "pixel Col = " << Col_n << ", pixel Row = " << Row_n << " Charge_n = " << Charge_n << ", getChipID: " << Chip_id << ", getROFrame: " << mChipDataBuffer->getROFrame();
+                    //}
+                    if(Chip_id == 4922) {
+                        LOG(INFO) << "pixel Col = " << Col_n << ", pixel Row = " << Row_n << " Charge_n = " << Charge_n << ", getChipID: " << mChipDataBuffer->getChipID() << ", getROFrame: " << mChipDataBuffer->getROFrame();
+                        //hitmap[Charge_n][Row_n][Col_n] = hitmap[Charge_n][Row_n][Col_n]+1;
+                        hitmap[Charge_n][Row_n][Col_n] = 1;
                     }
 
                 }
@@ -131,7 +135,7 @@ void ITSCalibrator<Mapping>::run(ProcessingContext& pc)
         TriggerId++;
     }
 
-    LOG(INFO) << "mTFCounter = " << mTFCounter;
+    //LOG(INFO) << "mTFCounter = " << mTFCounter;
 
     TriggerId = 0;
     mTFCounter++;
@@ -142,19 +146,19 @@ void ITSCalibrator<Mapping>::endOfStream(EndOfStreamContext& ec)
 {
     //int how_many_rows_are_not_fired = 0;
     //int how_many_pixels_fired_in_a_col = 0;
-    //for(int num_char = 0; num_char < 50; num_char++) {
-    //    int test_accumulator = 0;
-    //for(int num_col = 0; num_col < 1024; num_col++) {
-    //    for(int num_row = 0; num_row < 512; num_row++) {
-    //        test_accumulator = test_accumulator + hitmap[num_char][num_row][num_col];
-    //    }
-    //}
-    //    LOG(INFO) << "chip 422 at n_charges injected " << num_char << " Number of pixels fired = " << test_accumulator;
-    //}
-
     for(int num_char = 0; num_char < 50; num_char++) {
-        LOG(INFO) << hitmap[num_char][10][101];
+        int test_accumulator = 0;
+    for(int num_col = 0; num_col < 1024; num_col++) {
+        for(int num_row = 0; num_row < 512; num_row++) {
+            test_accumulator = test_accumulator + hitmap[num_char][num_row][num_col];
+        }
     }
+        LOG(INFO) << "chip at n_charges injected " << num_char << " Number of pixels fired = " << test_accumulator;
+    }
+
+    //for(int num_char = 0; num_char < 50; num_char++) {
+    //    LOG(INFO) << hitmap[num_char][10][101];
+    //}
 
     //how to create a hit map?
     //for(int num_row = 0; num_row < 512; num_row++) {

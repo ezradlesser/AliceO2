@@ -74,7 +74,7 @@ class ITSCalibrator : public Task
     ChipPixelData* mChipDataBuffer = nullptr;
     int mHitNumberOfChip[7][48][2][14][14] = { { { { { 0 } } } } }; //layer, stave, substave, hic, chip
     std::vector<ChipPixelData> mChipsBuffer;  // currently processed ROF's chips data
-
+    
     int hitmap[50][512][1024] = {{{0}}};
     
     int hitmap_row_5[40][1024] = {{0}};
