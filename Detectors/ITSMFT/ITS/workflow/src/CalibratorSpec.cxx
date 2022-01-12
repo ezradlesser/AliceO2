@@ -295,7 +295,7 @@ bool ITSCalibrator<Mapping>::GetThreshold_Fit(const short int* data, const short
 
     //g->SetMarkerStyle(20);
     //g->Draw("AP");
-    g->Fit("fitfcn", "Q");
+    g->Fit("fitfcn", "QL");
 
     noise = fitfcn->GetParameter(1);
     thresh = fitfcn->GetParameter(0);
@@ -303,16 +303,16 @@ bool ITSCalibrator<Mapping>::GetThreshold_Fit(const short int* data, const short
 
       // Testing code to create one S-curve in a ROOT file and then exit
     // Initialize ROOT output file
-    TFile* tf = new TFile("threshold_scan.root", "UPDATE");
+    //TFile* tf = new TFile("threshold_scan.root", "UPDATE");
 
     // Update the ROOT file with most recent histo
-    tf->cd();
-    g->Write(0, TObject::kOverwrite);
-    fitfcn->Write(0, TObject::kOverwrite);
+    //tf->cd();
+    //g->Write(0, TObject::kOverwrite);
+    //fitfcn->Write(0, TObject::kOverwrite);
 
     // Close file and clean up memory
-    tf->Close();
-    delete tf;
+    //tf->Close();
+    //delete tf;
     //exit(1);
 
     delete g;
@@ -348,6 +348,9 @@ bool ITSCalibrator<Mapping>::GetThreshold_Derivative(const short int* data,
     // Fill array with derivatives
     for (int i = Lower; i < Upper; i++) {
         deriv[i - Lower] = (float) (data[i+1] - data[i]) / (float) (x[i+1] - x[i]);
+        if(deriv[i- Lower] < 0) {
+            deriv[i - Lower] = 0.;
+        }
         nCounts += deriv[i - Lower];
         xfx += x[i] * deriv[i - Lower];
         fx += deriv[i - Lower];
@@ -845,7 +848,7 @@ void ITSCalibrator<Mapping>::run(ProcessingContext& pc) {
 //////////////////////////////////////////////////////////////////////////////
 // Calculate the average threshold given a vector of threshold objects
 template <class Mapping>
-float ITSCalibrator<Mapping>::find_average(const std::vector<threshold_obj>& data) {
+void ITSCalibrator<Mapping>::find_average(const std::vector<threshold_obj>& data, float& avg, float& rms) {
 
     float sum = 0;
     unsigned int counts = 0;
@@ -855,15 +858,21 @@ float ITSCalibrator<Mapping>::find_average(const std::vector<threshold_obj>& dat
             counts++;
         }
     }
-    if (counts) return (sum / counts);
-    return -1;
+    avg = (!counts) 0. : sum/(float)counts;
+    sum=0.;
+    for (const threshold_obj& t : data) {
+        if (t.success) {
+            sum += (avg-(float)t.threshold)*(avg-(float)t.threshold);
+        }
+    }
+    rms = (!counts) ? 0. : std::sqrt(sum/(float)counts);
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 template <class Mapping>
 void ITSCalibrator<Mapping>::add_db_entry(const short int& chipID, const std::string * name,
-        const short int& avg, bool status, o2::dcs::DCSconfigObject_t& tuning) {
+        const short int& avg, const float& rms, bool status, o2::dcs::DCSconfigObject_t& tuning) {
 
     // Obtain specific chip information from the chip ID (layer, stave, ...)
     int lay, sta, ssta, mod, chipInMod; // layer, stave, sub stave, module, chip
@@ -876,6 +885,7 @@ void ITSCalibrator<Mapping>::add_db_entry(const short int& chipID, const std::st
     o2::dcs::addConfigItem(tuning, "Hic_Pos", std::to_string(mod));
     o2::dcs::addConfigItem(tuning, "ChipID", std::to_string(chipInMod));
     o2::dcs::addConfigItem(tuning, *name, std::to_string(avg));
+    o2::dcs::addConfigItem(tuning, "Rms", std::to_string(rms));
     o2::dcs::addConfigItem(tuning, "Status", std::to_string(status)); // pass or fail
 }
 
@@ -955,14 +965,15 @@ void ITSCalibrator<Mapping>::endOfStream(EndOfStreamContext& ec) {
     // Add configuration item to output strings for CCDB
     std::string * name;
     bool push_to_ccdb = false;
+    float avg, rms;
     if (*(this->nRange) == this->nVCASN) {
         // Loop over each chip in the thresholds data
         name = new std::string("VCASN");
         for (auto const& [chipID, t_vec] : this->thresholds) {
             // Casting float to short int to save memory
-            short int avg = (short int) this->find_average(t_vec);
+            this->find_average(t_vec, avg, rms);
             bool status = (this->x[0] < avg && avg < this->x[*(this->nRange) - 1]);
-            this->add_db_entry(chipID, name, avg, status, tuning);
+            this->add_db_entry(chipID, name, (short int)avg, rms, status, tuning);
             push_to_ccdb = true;
         }
     } else if (*(this->nRange) == this->nITHR) {
@@ -970,9 +981,9 @@ void ITSCalibrator<Mapping>::endOfStream(EndOfStreamContext& ec) {
         name = new std::string("ITHR");
         for (auto const& [chipID, t_vec] : this->thresholds) {
             // Casting float to short int to save memory
-            short int avg = (short int) this->find_average(t_vec);
+            this->find_average(t_vec, avg, rms);
             bool status = (this->x[0] < avg && avg < this->x[*(this->nRange) - 1]);
-            this->add_db_entry(chipID, name, avg, status, tuning);
+            this->add_db_entry(chipID, name, (short int)avg, rms, status, tuning);
             push_to_ccdb = true;
         }
     } else if (*(this->nRange) == this->nCharge) {
