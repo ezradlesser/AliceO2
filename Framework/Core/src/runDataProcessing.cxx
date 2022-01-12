@@ -1108,7 +1108,6 @@ void gui_callback(uv_timer_s* ctx)
     draw_data = gui->lastFrame;
   }
 
-
   if (frameLatency / 1000000 > 15) {
     uint64_t frameEnd = uv_hrtime();
     *(gui->frameCost) = (frameEnd - frameStart) / 1000000.f;

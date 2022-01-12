@@ -23,7 +23,7 @@ namespace its
 namespace tree_maker_workflow
 {
 
-    framework::WorkflowSpec getWorkflow();
+framework::WorkflowSpec getWorkflow();
 
 }
 

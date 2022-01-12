@@ -575,52 +575,52 @@ int CruRawReader::processHalfCRU(int cruhbfstartoffset)
           mHBFoffset32 = std::distance(mHBFPayload.begin(), linkend); //currentlinksize-mTrackletWordsRead-sizeof(digitHCHeader)/4; // advance to the end of the link
           mTotalDigitWordsRejected += std::distance(linkstart + mTrackletWordsRead + sizeof(DigitHCHeader) / 4, linkend);
         } else {
-            mDigitWordsRead = 0;
-            auto digitsparsingstart = std::chrono::high_resolution_clock::now();
-            //linkstart and linkend already have the multiple cruheaderoffsets built in
-            mDigitWordsRead = mDigitsParser.Parse(&mHBFPayload, linkstart, linkend, mDetector[mWhichData], mStack[mWhichData], mLayer[mWhichData], mHalfChamberSide[mWhichData], mDigitHCHeader, mFEEID, currentlinkindex, mCurrentEvent, &mEventRecords, mOptions, cleardigits);
-            std::chrono::duration<double, std::micro> digitsparsingtime = std::chrono::high_resolution_clock::now() - digitsparsingstart;
-            if (mRootOutput) {
-              mDigitTiming->Fill((int)std::chrono::duration_cast<std::chrono::microseconds>(digitsparsingtime).count());
+          mDigitWordsRead = 0;
+          auto digitsparsingstart = std::chrono::high_resolution_clock::now();
+          //linkstart and linkend already have the multiple cruheaderoffsets built in
+          mDigitWordsRead = mDigitsParser.Parse(&mHBFPayload, linkstart, linkend, mDetector[mWhichData], mStack[mWhichData], mLayer[mWhichData], mHalfChamberSide[mWhichData], mDigitHCHeader, mFEEID, currentlinkindex, mCurrentEvent, &mEventRecords, mOptions, cleardigits);
+          std::chrono::duration<double, std::micro> digitsparsingtime = std::chrono::high_resolution_clock::now() - digitsparsingstart;
+          if (mRootOutput) {
+            mDigitTiming->Fill((int)std::chrono::duration_cast<std::chrono::microseconds>(digitsparsingtime).count());
+          }
+          mCurrentEvent->incDigitTime((double)std::chrono::duration_cast<std::chrono::microseconds>(digitsparsingtime).count());
+          mDigitWordsRejected = mDigitsParser.getDumpedDataCount();
+          mCurrentEvent->incWordsRead(mDigitWordsRead);
+          mCurrentEvent->incWordsRejected(mDigitWordsRejected);
+          mEventRecords.incLinkWordsRead(mFEEID.supermodule, mHalfChamberSide[0], stack_layer, mDigitWordsRead);
+          mEventRecords.incLinkWordsRejected(mFEEID.supermodule, mHalfChamberSide[0], stack_layer, mDigitWordsRejected);
+          if (mHeaderVerbose) {
+            if (mDigitsParser.getDumpedDataCount() != 0) {
+              LOG(info) << "FEEID: " << mFEEID.word << " LINK #" << oriindex << " bad datacount:" << mDigitsParser.getDataWordsParsed() << "::" << mDigitsParser.getDumpedDataCount();
+            } else {
+              LOG(info) << "FEEID: " << mFEEID.word << " LINK #" << oriindex << " good datacount:" << mDigitsParser.getDataWordsParsed() << "::" << mDigitsParser.getDumpedDataCount();
             }
-            mCurrentEvent->incDigitTime((double)std::chrono::duration_cast<std::chrono::microseconds>(digitsparsingtime).count());
-            mDigitWordsRejected = mDigitsParser.getDumpedDataCount();
-            mCurrentEvent->incWordsRead(mDigitWordsRead);
-            mCurrentEvent->incWordsRejected(mDigitWordsRejected);
-            mEventRecords.incLinkWordsRead(mFEEID.supermodule, mHalfChamberSide[0], stack_layer, mDigitWordsRead);
-            mEventRecords.incLinkWordsRejected(mFEEID.supermodule, mHalfChamberSide[0], stack_layer, mDigitWordsRejected);
-            if (mHeaderVerbose) {
-              if (mDigitsParser.getDumpedDataCount() != 0) {
-                LOG(info) << "FEEID: " << mFEEID.word << " LINK #" << oriindex << " bad datacount:" << mDigitsParser.getDataWordsParsed() << "::" << mDigitsParser.getDumpedDataCount();
-              } else {
-                LOG(info) << "FEEID: " << mFEEID.word << " LINK #" << oriindex << " good datacount:" << mDigitsParser.getDataWordsParsed() << "::" << mDigitsParser.getDumpedDataCount();
-              }
+          }
+          mDigitWordsRejected = mDigitsParser.getDumpedDataCount();
+          if (mHeaderVerbose) {
+            if (mDigitsParser.getDumpedDataCount() != 0) {
+              LOG(info) << "FEEID: " << mFEEID.word << " LINK #" << oriindex << " bad datacount:" << mDigitsParser.getDataWordsParsed() << "::" << mDigitsParser.getDumpedDataCount();
+            } else {
+              LOG(info) << "FEEID: " << mFEEID.word << " LINK #" << oriindex << " good datacount:" << mDigitsParser.getDataWordsParsed() << "::" << mDigitsParser.getDumpedDataCount();
             }
-            mDigitWordsRejected = mDigitsParser.getDumpedDataCount();
-            if (mHeaderVerbose) {
-              if (mDigitsParser.getDumpedDataCount() != 0) {
-                LOG(info) << "FEEID: " << mFEEID.word << " LINK #" << oriindex << " bad datacount:" << mDigitsParser.getDataWordsParsed() << "::" << mDigitsParser.getDumpedDataCount();
-              } else {
-                LOG(info) << "FEEID: " << mFEEID.word << " LINK #" << oriindex << " good datacount:" << mDigitsParser.getDataWordsParsed() << "::" << mDigitsParser.getDumpedDataCount();
-              }
-              mEventRecords.incParsingError(TRDParsingDigitStackMismatch, mFEEID.supermodule, mHalfChamberSide[0], mStack[0] * constants::NLAYER + mLayer[0]);
+            mEventRecords.incParsingError(TRDParsingDigitStackMismatch, mFEEID.supermodule, mHalfChamberSide[0], mStack[0] * constants::NLAYER + mLayer[0]);
+          }
+          if (mDigitWordsRead + mDigitWordsRejected != std::distance(linkstart, linkend)) {
+            //we have the data corruption problem of a pile of stuff at the end of a link, jump over it.
+            if (mFixDigitEndCorruption) {
+              mDigitWordsRead = std::distance(linkstart, linkend);
+            } else {
+              increment2dHist(TRDParsingDigitDataStillOnLink, (mFEEID.supermodule * 2 + mHalfChamberSide[0]) * 30, mStack[0], mLayer[0]);
+              mEventRecords.incParsingError(TRDParsingDigitDataStillOnLink, mFEEID.supermodule, mHalfChamberSide[0], mStack[0] * constants::NLAYER + mLayer[0]);
             }
-            if (mDigitWordsRead + mDigitWordsRejected != std::distance(linkstart, linkend)) {
-              //we have the data corruption problem of a pile of stuff at the end of a link, jump over it.
-              if (mFixDigitEndCorruption) {
-                mDigitWordsRead = std::distance(linkstart, linkend);
-              } else {
-                increment2dHist(TRDParsingDigitDataStillOnLink, (mFEEID.supermodule * 2 + mHalfChamberSide[0]) * 30, mStack[0], mLayer[0]);
-                mEventRecords.incParsingError(TRDParsingDigitDataStillOnLink, mFEEID.supermodule, mHalfChamberSide[0], mStack[0] * constants::NLAYER + mLayer[0]);
-              }
-            }
-            mTotalDigitsFound += mDigitsParser.getDigitsFound();
-            if (mVerbose) {
-              LOG(info) << "mDigitWordsRead : " << mDigitWordsRead << " mem copy with offset of : " << cruhbfstartoffset << " parsing digits with linkstart: " << linkstart << " ending at : " << linkend << " linkhbf start pos:" << hbfoffsetatstartoflink;
-            }
-            mHBFoffset32 += mDigitWordsRead + mDigitWordsRejected; // all 3 in 32bit units
-            mTotalDigitWordsRead += mDigitWordsRead;
-            mTotalDigitWordsRejected += mDigitWordsRejected;
+          }
+          mTotalDigitsFound += mDigitsParser.getDigitsFound();
+          if (mVerbose) {
+            LOG(info) << "mDigitWordsRead : " << mDigitWordsRead << " mem copy with offset of : " << cruhbfstartoffset << " parsing digits with linkstart: " << linkstart << " ending at : " << linkend << " linkhbf start pos:" << hbfoffsetatstartoflink;
+          }
+          mHBFoffset32 += mDigitWordsRead + mDigitWordsRejected; // all 3 in 32bit units
+          mTotalDigitWordsRead += mDigitWordsRead;
+          mTotalDigitWordsRejected += mDigitWordsRejected;
           sumlinklengths += mCurrentHalfCRULinkLengths[currentlinkindex];
           sumtrackletwords += mTrackletWordsRead;
           sumdigitwords += mDigitWordsRead;
