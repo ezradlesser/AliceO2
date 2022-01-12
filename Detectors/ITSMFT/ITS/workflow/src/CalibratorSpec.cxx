@@ -956,7 +956,7 @@ void ITSCalibrator<Mapping>::send_to_ccdb(std::string* name,
   o2::ccdb::CcdbObjectInfo info((path + *name), "threshold_map", "calib_scan.root", md, tstart, tend);
   //auto file_name = o2::ccdb::CcdbApi::generateFileName(*name);
   auto image = o2::ccdb::CcdbApi::createObjectImage(&tuning, &info);
-  std::string file_name = "calib_scan.root";
+  std::string file_name = name=="VCASN" ? "calib_scan_VCASN.root" : "calib_scan_ITHR.root";
   info.setFileName(file_name);
   LOG(info) << "Class Name: " << class_name << " | File Name: " << file_name
             << "\nSending object " << info.getPath() << "/" << info.getFileName()
