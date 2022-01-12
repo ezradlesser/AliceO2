@@ -1,4 +1,4 @@
-/// \file   CalibratorSpec.h
+// \file   CalibratorSpec.h
 
 #ifndef O2_ITS_CALIBRATOR_
 #define O2_ITS_CALIBRATOR_
@@ -160,11 +160,11 @@ class ITSCalibrator : public Task
         bool GetThreshold_Fit(const short int*, const short int*, const short int&, float&, float&);
         bool GetThreshold_Derivative(const short int*, const short int*, const short int&, float&, float&);
         bool GetThreshold_Hitcounting(const short int*, const short int*, const short int&, float&);
-        float find_average(const std::vector<threshold_obj>&);
+        void find_average(const std::vector<threshold_obj>&, float&, float&);
         void save_threshold(const short int&, const short int&, const short int&, float*, float*, bool);
 
         // Helper functions for writing to the database
-        void add_db_entry(const short int&, const std::string *, const short int&, bool,
+        void add_db_entry(const short int&, const std::string *, const short int&, float &, bool,
                           o2::dcs::DCSconfigObject_t &);
         void send_to_ccdb(std::string *, o2::dcs::DCSconfigObject_t&, EndOfStreamContext&);
 
