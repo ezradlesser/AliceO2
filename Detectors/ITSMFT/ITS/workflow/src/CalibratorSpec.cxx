@@ -886,7 +886,7 @@ void ITSCalibrator<Mapping>::find_average(const std::vector<threshold_obj>& data
       counts++;
     }
   }
-  avg = (!counts)0. : sum / (float)counts;
+  avg = (!counts) ? 0. : sum / (float)counts;
   sum = 0.;
   for (const threshold_obj& t : data) {
     if (t.success) {
