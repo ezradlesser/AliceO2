@@ -156,7 +156,7 @@ class ITSCalibrator : public Task
   void save_threshold(const short int&, const short int&, const short int&, float*, float*, bool);
 
   // Helper functions for writing to the database
-  void add_db_entry(const short int&, const std::string*, const short int&, float&, bool,
+  void add_db_entry(const short int&, const std::string*, const short int&, const float&, bool,
                     o2::dcs::DCSconfigObject_t&);
   void send_to_ccdb(std::string*, o2::dcs::DCSconfigObject_t&, EndOfStreamContext&);
 

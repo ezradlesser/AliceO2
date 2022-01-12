@@ -278,13 +278,13 @@ bool ITSCalibrator<Mapping>::GetThreshold_Fit(const short int* data, const short
   // Find lower & upper values of the S-curve region
   short int Lower, Upper;
   if (!this->FindUpperLower(data, x, NPoints, Lower, Upper, flip) || Lower == Upper) {
-    LOG(warning) << "Start-finding unsuccessful";
+    LOG(warning) << "Start-finding unsuccessful: (Lower, Upper) = ("<<Lower<<", "<<Upper<<")";
     return false;
   }
   float Start = (x[Upper] + x[Lower]) / 2;
 
   if (Start < 0) {
-    LOG(warning) << "Start-finding unsuccessful";
+    LOG(warning) << "Start-finding unsuccessful: Start = "<<Start;
     return false;
   }
 
@@ -343,15 +343,13 @@ bool ITSCalibrator<Mapping>::GetThreshold_Derivative(const short int* data,
   short int Lower, Upper;
   bool flip = (*(this->nRange) == this->nITHR);
   if (!this->FindUpperLower(data, x, NPoints, Lower, Upper, flip) || Lower == Upper) {
-    LOG(error) << "Start-finding unsuccessful";
+    LOG(warning) << "Start-finding unsuccessful: (Lower, Upper) = ("<<Lower<<", "<<Upper<<")";
     return false;
   }
 
-  LOG(info) << "Lower: " << Lower << " | x(Lower): " << x[Lower] << " | Upper: " << Upper << " | x(Upper): " << x[Upper];
   int deriv_size = Upper - Lower;
   float* deriv = new float[deriv_size]; // Maybe better way without ROOT?
   float xfx = 0, fx = 0;
-  float nCounts = 0;
 
   // Fill array with derivatives
   for (int i = Lower; i < Upper; i++) {
@@ -359,19 +357,17 @@ bool ITSCalibrator<Mapping>::GetThreshold_Derivative(const short int* data,
     if (deriv[i - Lower] < 0) {
       deriv[i - Lower] = 0.;
     }
-    nCounts += deriv[i - Lower];
     xfx += x[i] * deriv[i - Lower];
     fx += deriv[i - Lower];
   }
-
   thresh = xfx / fx;
-  LOG(info) << "threshold: " << thresh;
+ 
   float stddev = 0;
   for (int i = Lower; i < Upper; i++) {
     stddev += std::pow(x[i] - thresh, 2) * deriv[i - Lower];
   }
 
-  stddev /= nCounts;
+  stddev /= fx;
   noise = std::sqrt(stddev);
 
   delete[] deriv;
@@ -475,11 +471,11 @@ void ITSCalibrator<Mapping>::extract_thresh_row(const short int& chipID, const s
     // Print helpful info to output file for debugging
     // col+1 because of ROOT 1-indexing (I think row already has the +1)
     catch (int i) {
-      LOG(info) << "ERROR: start-finding unsuccessful for chipID " << chipID
+      LOG(warning) << "start-finding unsuccessful for chipID " << chipID
                 << " row " << row << " column " << (col_i + 1) << '\n';
       continue;
     } catch (int* i) {
-      LOG(info) << "ERROR: start-finding unsuccessful for chipID " << chipID
+      LOG(warning) << "start-finding unsuccessful for chipID " << chipID
                 << " row " << row << " column " << (col_i + 1) << '\n';
       continue;
     }
@@ -776,7 +772,7 @@ void ITSCalibrator<Mapping>::run(ProcessingContext& pc)
   const unsigned int nROF = (unsigned int)ROFs.size();
   //const short int nCals = (short int) calibs.size();
 
-  LOG(info) << "Processing TF# " << tfcounter;
+  //LOG(info) << "Processing TF# " << tfcounter;
 
   // Loop over readout frames (usually only 1, sometimes 2)
   for (unsigned int iROF = 0; iROF < nROF; iROF++) {
@@ -792,7 +788,7 @@ void ITSCalibrator<Mapping>::run(ProcessingContext& pc)
       const auto& calib = calibs[iROF * nRUs + iRU];
       if (calib.calibUserField != 0) {
         if (charge >= 0) {
-          LOG(info) << "WARNING: more than one charge detected!";
+          LOG(warning) << "More than one charge detected!";
         }
 
         // Run Type = calibword >> 24
@@ -821,7 +817,7 @@ void ITSCalibrator<Mapping>::run(ProcessingContext& pc)
 
     // If a charge was not found, throw an error and skip this ROF
     if (charge < 0) {
-      LOG(info) << "WARNING: Charge not updated\n";
+      LOG(warning) << "Charge not updated\n";
       //} else if (charge == 0) {
       //LOG(info) << "WARNING: charge == 0\n";
     } else {
@@ -840,15 +836,15 @@ void ITSCalibrator<Mapping>::run(ProcessingContext& pc)
         // Check if chip hasn't appeared before
         if (this->currentRow.find(chipID) == this->currentRow.end()) {
           // Update the current row and hit map
-          LOG(info) << "New chip detected: " << chipID;
+          //LOG(info) << "New chip detected: " << chipID;
           this->reset_row_hitmap(chipID, row);
           // Create data structures to hold the threshold info
           //this->init_chip_data(chipID);
 
           // Check if we have a new row on an already existing chip
         } else if (this->currentRow[chipID] != row) {
-          LOG(info) << "Extracting threshold values for row " << this->currentRow[chipID]
-                    << " on chipID " << chipID;
+          //LOG(info) << "Extracting threshold values for row " << this->currentRow[chipID]
+          //          << " on chipID " << chipID;
           this->extract_thresh_row(chipID, this->currentRow[chipID]);
           // Write thresholds to output data structures
           this->update_output(chipID);
@@ -862,7 +858,6 @@ void ITSCalibrator<Mapping>::run(ProcessingContext& pc)
                      << " and max " << this->max << " (range: " << *(this->nRange) << ")";
           exit(1);
         }
-        //LOG(info) << "before";
         this->pixelHits[chipID][col][charge - this->min]++;
 
       } // for (digits)
@@ -956,7 +951,7 @@ void ITSCalibrator<Mapping>::send_to_ccdb(std::string* name,
   o2::ccdb::CcdbObjectInfo info((path + *name), "threshold_map", "calib_scan.root", md, tstart, tend);
   //auto file_name = o2::ccdb::CcdbApi::generateFileName(*name);
   auto image = o2::ccdb::CcdbApi::createObjectImage(&tuning, &info);
-  std::string file_name = name=="VCASN" ? "calib_scan_VCASN.root" : "calib_scan_ITHR.root";
+  std::string file_name = *name=="VCASN" ? "calib_scan_VCASN.root" : "calib_scan_ITHR.root";
   info.setFileName(file_name);
   LOG(info) << "Class Name: " << class_name << " | File Name: " << file_name
             << "\nSending object " << info.getPath() << "/" << info.getFileName()
