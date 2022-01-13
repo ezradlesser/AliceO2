@@ -160,7 +160,7 @@ void ITSCalibrator::init(InitContext& ic)
 
 //////////////////////////////////////////////////////////////////////////////
 // Open a new ROOT file and threshold TTree for that file
-void ITSCalibrator::init_thresh_tree(bool recreate/*=true*/)
+void ITSCalibrator::init_thresh_tree(bool recreate /*=true*/)
 {
   // Create output directory to store output
   std::string dir = this->output_dir + fmt::format("{}_{}/", this->EnvironmentID, this->run_number);
@@ -517,7 +517,7 @@ void ITSCalibrator::finalize_output()
 
   // Check that expected output directory exists
   std::string dir = this->output_dir + fmt::format(
-    "{}_{}/", this->EnvironmentID, this->run_number);
+                                         "{}_{}/", this->EnvironmentID, this->run_number);
   if (!std::filesystem::exists(dir)) {
     LOG(error) << "Cannot find expected output directory " << dir;
     return;
@@ -623,7 +623,8 @@ void ITSCalibrator::set_run_type(const short int& runtype)
   // Initialize correct fit function if needed
   if (this->fit_type == FIT) {
     this->fitfcn = (this->scan_type == 'I') ? new TF1(
-      "fitfcn", erf_ithr, 0, 1500, 2) : new TF1("fitfcn", erf, 0, 1500, 2);
+                                                "fitfcn", erf_ithr, 0, 1500, 2)
+                                            : new TF1("fitfcn", erf, 0, 1500, 2);
     this->fitfcn->SetParName(0, "Threshold");
     this->fitfcn->SetParName(1, "Noise");
   }
@@ -650,13 +651,14 @@ bool ITSCalibrator::scan_is_finished(const short int& chipID)
 void ITSCalibrator::extract_and_update(const short int& chipID)
 {
   // In threshold scan case, reset threshold_tree before writing to a new file
-  if (this->scan_type == 'T') && (this->row_counter)++ == n_rows_per_file) {
-    // Finalize output and create a new TTree and ROOT file
-    this->finalize_output();
-    this->init_thresh_tree();
-    // Reset data counter for the next output file
-    this->row_counter = 1;
-  }
+  if (this->scan_type == 'T') && (this->row_counter)++ == n_rows_per_file)
+    {
+      // Finalize output and create a new TTree and ROOT file
+      this->finalize_output();
+      this->init_thresh_tree();
+      // Reset data counter for the next output file
+      this->row_counter = 1;
+    }
 
   // Extract threshold values and save to memory
   this->extract_thresh_row(chipID, this->currentRow[chipID]);

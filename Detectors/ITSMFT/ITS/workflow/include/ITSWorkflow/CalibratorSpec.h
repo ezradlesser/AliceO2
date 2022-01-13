@@ -54,28 +54,34 @@ struct ThresholdObj {
   bool success = false;
 };
 
-
 // Object for storing chip info in TTree
 typedef struct {
   short int chipID, row, col;
 } Pixel;
 
 // List of the possible run types for reference
-enum RunTypes
-{
-  THR_SCAN = 41, THR_SCAN_SHORT = 43, THR_SCAN_SHORT_100HZ = 101,
-  THR_SCAN_SHORT_200HZ = 102, VCASN150 = 61, VCASN100 = 81, VCASN100_100HZ = 103,
-  ITHR150 = 62, ITHR100 = 82, ITHR100_100HZ = 104, END_RUN = 0
+enum RunTypes {
+  THR_SCAN = 41,
+  THR_SCAN_SHORT = 43,
+  THR_SCAN_SHORT_100HZ = 101,
+  THR_SCAN_SHORT_200HZ = 102,
+  VCASN150 = 61,
+  VCASN100 = 81,
+  VCASN100_100HZ = 103,
+  ITHR150 = 62,
+  ITHR100 = 82,
+  ITHR100_100HZ = 104,
+  END_RUN = 0
 };
 
 // List of the possible fit types for reference
-enum FitTypes
-{
-  DERIVATIVE = 0, FIT = 1, HITCOUNTING = 2
+enum FitTypes {
+  DERIVATIVE = 0,
+  FIT = 1,
+  HITCOUNTING = 2
 };
 
-struct ThresholdMap
-{
+struct ThresholdMap {
  public:
   ThresholdMap(const std::map<short int, std::vector<ThresholdObj>>& t) : thresholds(t){};
   std::map<short int, std::vector<ThresholdObj>> thresholds;
@@ -165,7 +171,7 @@ class ITSCalibrator : public Task
   void update_LHC_period(ProcessingContext&);
 
   // Helper functions related to threshold extraction
-  void init_thresh_tree(bool recreate=true);
+  void init_thresh_tree(bool recreate = true);
   bool FindUpperLower(const short int*, const short int*, const short int&, short int&, short int&, bool);
   bool GetThreshold(const short int*, const short int*, const short int&, float&, float&);
   bool GetThreshold_Fit(const short int*, const short int*, const short int&, float&, float&);
